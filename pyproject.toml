@@ -25,6 +25,7 @@ dependencies = [
 
 [tool.uv]
 package = true
+no-build-package = ["greenlet"]
 
 [build-system]
 requires = ["hatchling"]
