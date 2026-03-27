@@ -18,7 +18,7 @@ DENSE_MODEL = os.getenv("DENSE_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 SPARSE_MODEL = os.getenv("SPARSE_MODEL", "Qdrant/bm25")
 LATE_INTERACTION_MODEL = os.getenv("LATE_INTERACTION_MODEL", "colbert-ir/colbertv2.0")
 
-qdrant = QdrantClient(url=QDRANT_URL)
+qdrant = QdrantClient(url=QDRANT_URL, prefer_grpc=False)
 _dense_model = TextEmbedding(DENSE_MODEL)
 _sparse_model = SparseTextEmbedding(SPARSE_MODEL)
 _late_model = LateInteractionTextEmbedding(LATE_INTERACTION_MODEL)

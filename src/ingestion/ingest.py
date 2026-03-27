@@ -152,7 +152,7 @@ def run_ingestion(bucket: str | None = None, force: bool = False) -> dict:
         secret_key=MINIO_SECRET_KEY,
         secure=MINIO_SECURE,
     )
-    qdrant = QdrantClient(url=QDRANT_URL)
+    qdrant = QdrantClient(url=QDRANT_URL, prefer_grpc=False)
     dense_model = TextEmbedding(DENSE_MODEL)
     sparse_model = SparseTextEmbedding(SPARSE_MODEL)
     late_model = LateInteractionTextEmbedding(LATE_INTERACTION_MODEL)
