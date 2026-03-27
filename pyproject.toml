@@ -25,7 +25,48 @@ dependencies = [
 
 [tool.uv]
 package = true
-no-build-package = ["greenlet"]
+no-build-package = [
+    # SQLAlchemy async support (C extension)
+    "greenlet",
+    # File locking (pure Python but version mismatches on Windows)
+    "filelock",
+    # HTTP client with C extensions
+    "aiohttp",
+    "frozenlist",
+    "multidict",
+    "yarl",
+    "propcache",
+    # Security / crypto (C extensions)
+    "bcrypt",
+    "cffi",
+    "cryptography",
+    "argon2-cffi-bindings",
+    "pycryptodome",
+    # gRPC (large native C++ libs)
+    "grpcio",
+    "grpcio-tools",
+    # Serialization (Rust extensions)
+    "orjson",
+    "ormsgpack",
+    "pydantic-core",
+    "tokenizers",
+    "watchfiles",
+    # Data / ML (C/Rust extensions)
+    "numpy",
+    "onnxruntime",
+    "pillow",
+    "lxml",
+    "xxhash",
+    "mmh3",
+    "zstandard",
+    "hf-xet",
+    # Misc native
+    "httptools",
+    "portalocker",
+    "uuid-utils",
+    "py-rust-stemmers",
+    "jsonschema-rs",
+]
 
 [build-system]
 requires = ["hatchling"]
