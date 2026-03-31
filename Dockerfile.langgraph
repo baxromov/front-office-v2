@@ -1,0 +1,62 @@
+# syntax=docker/dockerfile:1.4
+FROM python:3.12-slim
+
+# System dependencies
+# Retry logic for corporate proxy that drops connections
+RUN echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries && \
+    echo 'Acquire::http::Timeout "120";' >> /etc/apt/apt.conf.d/80-retries && \
+    echo 'Acquire::https::Timeout "120";' >> /etc/apt/apt.conf.d/80-retries && \
+    for i in 1 2 3; do \
+      apt-get update && apt-get install -y --no-install-recommends --fix-missing \
+        libgomp1 && break || \
+      (echo "apt retry $i/3..." && sleep 10); \
+    done && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Configure pip for better reliability and corporate network SSL bypass
+RUN pip config set global.timeout 1000 && \
+    pip config set global.retries 5 && \
+    pip config set global.trusted-host "pypi.org pypi.python.org files.pythonhosted.org"
+
+# Install LangGraph CLI
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir "langgraph-cli[inmem]"
+
+# Copy only pyproject.toml first for better caching
+COPY pyproject.toml README.md ./
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    PYTHONDONTWRITEBYTECODE=1 pip install -e . || true
+
+# Copy the rest of the code
+COPY . .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    PYTHONDONTWRITEBYTECODE=1 pip install -e .
+
+# Disable SSL verification globally for corporate network
+ENV PYTHONHTTPSVERIFY=0
+COPY <<'EOF' /usr/local/lib/python3.12/site-packages/sitecustomize.py
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
+# Patch httpx to disable SSL verification by default
+import httpx
+_orig_async_init = httpx.AsyncClient.__init__
+_orig_sync_init = httpx.Client.__init__
+
+def _patched_async_init(self, *args, **kwargs):
+    kwargs.setdefault("verify", False)
+    _orig_async_init(self, *args, **kwargs)
+
+def _patched_sync_init(self, *args, **kwargs):
+    kwargs.setdefault("verify", False)
+    _orig_sync_init(self, *args, **kwargs)
+
+httpx.AsyncClient.__init__ = _patched_async_init
+httpx.Client.__init__ = _patched_sync_init
+EOF
+
+EXPOSE 2024
+
+CMD ["langgraph", "dev", "--host", "0.0.0.0", "--port", "2024", "--allow-blocking", "--no-browser"]
