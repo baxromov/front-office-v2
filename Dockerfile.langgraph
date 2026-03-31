@@ -55,6 +55,17 @@ def _patched_sync_init(self, *args, **kwargs):
 
 httpx.AsyncClient.__init__ = _patched_async_init
 httpx.Client.__init__ = _patched_sync_init
+
+# Patch requests (used by HuggingFace Hub / fastembed model downloads)
+try:
+    import requests.adapters
+    _orig_send = requests.adapters.HTTPAdapter.send
+    def _patched_send(self, *args, **kwargs):
+        kwargs["verify"] = False
+        return _orig_send(self, *args, **kwargs)
+    requests.adapters.HTTPAdapter.send = _patched_send
+except Exception:
+    pass
 EOF
 
 EXPOSE 2024

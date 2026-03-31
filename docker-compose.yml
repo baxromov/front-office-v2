@@ -23,6 +23,9 @@ services:
       CURL_CA_BUNDLE: ""
       PYTHONHTTPSVERIFY: "0"
       NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      # HuggingFace Hub (fastembed downloads ONNX models at runtime)
+      HF_HUB_DISABLE_XET: "1"
+      HF_HUB_DOWNLOAD_TIMEOUT: "600"
     volumes:
       - model_cache:/root/.cache
     depends_on:
@@ -57,6 +60,9 @@ services:
       CURL_CA_BUNDLE: ""
       PYTHONHTTPSVERIFY: "0"
       NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      # HuggingFace Hub (fastembed downloads ONNX models at runtime)
+      HF_HUB_DISABLE_XET: "1"
+      HF_HUB_DOWNLOAD_TIMEOUT: "600"
       # Disable LangGraph OTLP exporter
       OTEL_TRACES_EXPORTER: "none"
     volumes:
