@@ -50,10 +50,11 @@ def ensure_qdrant_collection(
     client: QdrantClient,
     dense_size: int,
     colbert_size: int,
+    collection: str = QDRANT_COLLECTION,
 ) -> None:
-    if not client.collection_exists(QDRANT_COLLECTION):
+    if not client.collection_exists(collection):
         client.create_collection(
-            collection_name=QDRANT_COLLECTION,
+            collection_name=collection,
             vectors_config={
                 "all-MiniLM-L6-v2": VectorParams(
                     size=dense_size,
@@ -72,9 +73,9 @@ def ensure_qdrant_collection(
                 "bm25": SparseVectorParams(modifier=Modifier.IDF),
             },
         )
-        logger.info("Created Qdrant collection: %s", QDRANT_COLLECTION)
+        logger.info("Created Qdrant collection: %s", collection)
     else:
-        logger.info("Qdrant collection already exists: %s", QDRANT_COLLECTION)
+        logger.info("Qdrant collection already exists: %s", collection)
 
 
 def parse_file(data: bytes, filename: str) -> str:
@@ -90,9 +91,9 @@ def parse_file(data: bytes, filename: str) -> str:
     return data.decode("utf-8", errors="replace")
 
 
-def chunk_text(text: str) -> list[str]:
+def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, chunk_overlap: int = CHUNK_OVERLAP) -> list[str]:
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP
+        chunk_size=chunk_size, chunk_overlap=chunk_overlap
     )
     return splitter.split_text(text)
 
@@ -104,9 +105,12 @@ def ingest_file(
     dense_model: TextEmbedding,
     sparse_model: SparseTextEmbedding,
     late_model: LateInteractionTextEmbedding,
+    chunk_size: int = CHUNK_SIZE,
+    chunk_overlap: int = CHUNK_OVERLAP,
+    collection: str = QDRANT_COLLECTION,
 ) -> int:
     text = parse_file(data, filename)
-    chunks = chunk_text(text)
+    chunks = chunk_text(text, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     if not chunks:
         logger.warning("No chunks extracted from %s", filename)
         return 0
@@ -120,7 +124,7 @@ def ingest_file(
         points.append(
             PointStruct(
                 id=str(uuid.uuid4()),
-                vectors={
+                vector={
                     "all-MiniLM-L6-v2": dense.tolist(),
                     "bm25": bm25.as_object(),
                     "colbertv2.0": late.tolist(),
@@ -135,7 +139,7 @@ def ingest_file(
     batch_size = 100
     for i in range(0, len(points), batch_size):
         qdrant.upsert(
-            collection_name=QDRANT_COLLECTION,
+            collection_name=collection,
             points=points[i : i + batch_size],
         )
 
@@ -143,7 +147,13 @@ def ingest_file(
     return len(points)
 
 
-def run_ingestion(bucket: str | None = None, force: bool = False) -> dict:
+def run_ingestion(
+    bucket: str | None = None,
+    force: bool = False,
+    chunk_size: int = CHUNK_SIZE,
+    chunk_overlap: int = CHUNK_OVERLAP,
+    collection: str | None = None,
+) -> dict:
     bucket = bucket or MINIO_BUCKET
 
     minio_client = Minio(
@@ -159,12 +169,14 @@ def run_ingestion(bucket: str | None = None, force: bool = False) -> dict:
     mongo = MongoClient(MONGO_URL)
     db = mongo[MONGO_DB]
 
+    target_collection = collection or QDRANT_COLLECTION
+
     # Determine vector sizes from the models
     sample = ["sample"]
     dense_size = len(list(dense_model.embed(sample))[0].tolist())
     colbert_size = len(list(late_model.embed(sample))[0][0].tolist())
 
-    ensure_qdrant_collection(qdrant, dense_size, colbert_size)
+    ensure_qdrant_collection(qdrant, dense_size, colbert_size, collection=target_collection)
 
     if not minio_client.bucket_exists(bucket):
         return {"processed": 0, "skipped": 0, "errors": [f"Bucket '{bucket}' not found"]}
@@ -191,7 +203,11 @@ def run_ingestion(bucket: str | None = None, force: bool = False) -> dict:
             response.close()
             response.release_conn()
 
-            chunk_count = ingest_file(filename, data, qdrant, dense_model, sparse_model, late_model)
+            chunk_count = ingest_file(
+                filename, data, qdrant, dense_model, sparse_model, late_model,
+                chunk_size=chunk_size, chunk_overlap=chunk_overlap,
+                collection=target_collection,
+            )
 
             db.ingested_files.update_one(
                 {"filename": filename},

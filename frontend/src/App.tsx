@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import Chat from './pages/Chat'
 import Admin from './pages/Admin'
+import Settings from './pages/Settings'
+import Search from './pages/Search'
 import { getUser } from './api'
 
 function Protected({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
@@ -18,6 +20,8 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Protected><Chat /></Protected>} />
         <Route path="/admin" element={<Protected adminOnly><Admin /></Protected>} />
+        <Route path="/settings" element={<Protected adminOnly><Settings /></Protected>} />
+        <Route path="/search" element={<Protected><Search /></Protected>} />
       </Routes>
     </BrowserRouter>
   )

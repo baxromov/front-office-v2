@@ -120,3 +120,52 @@ export async function triggerIngest(force = false) {
   if (!res.ok) throw new Error('Ingest failed')
   return res.json() as Promise<{ processed: number; skipped: number; errors: { file: string; error: string }[] }>
 }
+
+export interface Settings {
+  temperature: number
+  max_tokens: number
+  chunk_size: number
+  chunk_overlap: number
+  top_k: number
+}
+
+export async function fetchSettings(): Promise<Settings> {
+  const res = await fetch(`${BASE}/settings`, { headers: authHeaders() })
+  if (!res.ok) throw new Error('Failed to fetch settings')
+  return res.json()
+}
+
+export async function saveSettings(settings: Settings): Promise<Settings> {
+  const res = await fetch(`${BASE}/settings`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(settings),
+  })
+  if (!res.ok) throw new Error('Failed to save settings')
+  return res.json()
+}
+
+export interface SearchChunk {
+  source: string
+  text: string
+  score: number
+}
+
+export async function fetchSearchChunks(query: string): Promise<SearchChunk[]> {
+  const res = await fetch(`${BASE}/search`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ query }),
+  })
+  if (!res.ok) throw new Error(`Search failed: ${res.status}`)
+  const data = await res.json()
+  return data.chunks as SearchChunk[]
+}
+
+export function streamSearchAnswer(query: string, chunks: SearchChunk[]) {
+  return fetch(`${BASE}/search/answer`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ query, chunks }),
+  })
+}

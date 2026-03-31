@@ -19,6 +19,8 @@ load_dotenv()
 
 LANGGRAPH_URL = os.getenv("LANGGRAPH_URL", "http://localhost:2024")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:397b-cloud")
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
@@ -157,7 +159,17 @@ class IngestRequest(BaseModel):
 async def trigger_ingest(req: IngestRequest, user=Depends(admin_user)):
     import asyncio
     from src.ingestion.ingest import run_ingestion
-    result = await asyncio.to_thread(run_ingestion, bucket=req.bucket, force=req.force)
+    db = get_db()
+    settings_doc = await db.settings.find_one({"_id": "global"}) or {}
+    chunk_size = int(settings_doc.get("chunk_size", 800))
+    chunk_overlap = int(settings_doc.get("chunk_overlap", 150))
+    result = await asyncio.to_thread(
+        run_ingestion,
+        bucket=req.bucket,
+        force=req.force,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+    )
     return result
 
 
@@ -292,5 +304,129 @@ async def stream_message(thread_id: str, body: dict, user=Depends(current_user))
                 async for line in resp.aiter_lines():
                     if line:
                         yield line + "\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+# ── Settings ──────────────────────────────────────────────────────────────────
+
+class SettingsModel(BaseModel):
+    temperature: float
+    max_tokens: int
+    chunk_size: int
+    chunk_overlap: int
+    top_k: int
+
+
+@app.get("/api/settings")
+async def get_settings(user=Depends(current_user)):
+    db = get_db()
+    doc = await db.settings.find_one({"_id": "global"}) or {}
+    doc.pop("_id", None)
+    return doc
+
+
+@app.put("/api/settings")
+async def update_settings(body: SettingsModel, user=Depends(admin_user)):
+    db = get_db()
+    await db.settings.update_one(
+        {"_id": "global"},
+        {"$set": body.model_dump()},
+        upsert=True,
+    )
+    doc = await db.settings.find_one({"_id": "global"}) or {}
+    doc.pop("_id", None)
+    return doc
+
+
+# ── Search ────────────────────────────────────────────────────────────────────
+
+@app.post("/api/search")
+async def search(body: dict, user=Depends(current_user)):
+    import asyncio
+    from src.agent.search import run_search
+
+    query = (body.get("query") or "").strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="query required")
+
+    db = get_db()
+    settings_doc = await db.settings.find_one({"_id": "global"}) or {}
+    top_k = int(body.get("top_k") or settings_doc.get("top_k", 5))
+
+    try:
+        chunks = await asyncio.to_thread(run_search, query, top_k)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"chunks": chunks}
+
+
+@app.post("/api/search/answer")
+async def search_answer(body: dict, user=Depends(current_user)):
+    import json
+
+    query = (body.get("query") or "").strip()
+    chunks = body.get("chunks") or []
+    if not query:
+        raise HTTPException(status_code=400, detail="query required")
+
+    db = get_db()
+    settings_doc = await db.settings.find_one({"_id": "global"}) or {}
+    temperature = float(settings_doc.get("temperature", 0.7))
+    max_tokens = int(settings_doc.get("max_tokens", 1024))
+
+    async def event_stream():
+        try:
+            context = "\n\n---\n\n".join(
+                f"[Source: {c['source']}]\n{c['text']}" for c in chunks
+            ) if chunks else "No relevant documents found."
+            ollama_messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a helpful assistant. "
+                        "Use the following retrieved document chunks to answer the user's question. "
+                        "Answer in the same language the user used."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": f"Context:\n{context}\n\nQuestion: {query}",
+                },
+            ]
+            async with httpx.AsyncClient(timeout=120) as client:
+                async with client.stream(
+                    "POST",
+                    f"{OLLAMA_BASE_URL}/api/chat",
+                    json={
+                        "model": OLLAMA_MODEL,
+                        "messages": ollama_messages,
+                        "stream": True,
+                        "think": False,
+                        "options": {
+                            "temperature": temperature,
+                            "num_predict": max_tokens,
+                        },
+                    },
+                ) as resp:
+                    if resp.status_code != 200:
+                        err = await resp.aread()
+                        raise Exception(f"Ollama error {resp.status_code}: {err.decode()}")
+                    async for line in resp.aiter_lines():
+                        if line:
+                            try:
+                                data = json.loads(line)
+                                if data.get("message", {}).get("thinking"):
+                                    continue
+                                token = data.get("message", {}).get("content", "")
+                                if token:
+                                    yield f"event: llm_token\ndata: {json.dumps({'token': token})}\n\n"
+                            except Exception:
+                                pass
+        except Exception as e:
+            yield f"event: error\ndata: {json.dumps({'message': str(e)})}\n\n"
+
+        yield "event: done\ndata: {}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")

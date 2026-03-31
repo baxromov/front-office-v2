@@ -22,3 +22,14 @@ async def init_db():
     await db.users.create_index("username", unique=True)
     await db.threads.create_index([("user_id", 1), ("created_at", -1)])
     await db.ingested_files.create_index([("filename", 1), ("etag", 1)], unique=True)
+    await db.settings.update_one(
+        {"_id": "global"},
+        {"$setOnInsert": {
+            "temperature": 0.7,
+            "max_tokens": 1024,
+            "chunk_size": 800,
+            "chunk_overlap": 150,
+            "top_k": 5,
+        }},
+        upsert=True,
+    )
