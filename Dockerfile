@@ -16,16 +16,18 @@ WORKDIR /app
 # Configure pip for corporate network
 RUN pip config set global.trusted-host "pypi.org pypi.python.org files.pythonhosted.org" && \
     pip config set global.timeout 1000 && \
-    pip config set global.retries 5 && \
-    pip install --upgrade pip setuptools wheel
+    pip config set global.retries 10 && \
+    pip install --no-cache-dir --upgrade pip setuptools wheel
 
 # Copy only dependency files first for better layer caching
 COPY pyproject.toml README.md ./
 
-# Install dependencies
+# Install dependencies with retry loop for flaky corporate proxy
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -e . --no-deps || true && \
-    pip install -e .
+    for i in 1 2 3 4 5; do \
+    pip install -e . && break || \
+    (echo "Retry $i/5 after network error..." && sleep 15); \
+    done
 
 # Copy application source
 COPY src/ src/

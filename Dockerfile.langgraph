@@ -16,23 +16,29 @@ WORKDIR /app
 
 # Configure pip for better reliability and corporate network SSL bypass
 RUN pip config set global.timeout 1000 && \
-    pip config set global.retries 5 && \
-    pip config set global.trusted-host "pypi.org pypi.python.org files.pythonhosted.org"
+    pip config set global.retries 10 && \
+    pip config set global.trusted-host "pypi.org pypi.python.org files.pythonhosted.org" && \
+    pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# Install LangGraph CLI
+# Install LangGraph CLI with retry loop
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-cache-dir "langgraph-cli[inmem]"
+    for i in 1 2 3 4 5; do \
+    pip install "langgraph-cli[inmem]" && break || \
+    (echo "Retry $i/5 after network error..." && sleep 15); \
+    done
 
 # Copy only pyproject.toml first for better caching
 COPY pyproject.toml README.md ./
 
+# Install project dependencies with retry loop
 RUN --mount=type=cache,target=/root/.cache/pip \
-    PYTHONDONTWRITEBYTECODE=1 pip install -e . || true
+    for i in 1 2 3 4 5; do \
+    pip install -e . && break || \
+    (echo "Retry $i/5 after network error..." && sleep 15); \
+    done
 
 # Copy the rest of the code
 COPY . .
-RUN --mount=type=cache,target=/root/.cache/pip \
-    PYTHONDONTWRITEBYTECODE=1 pip install -e .
 
 # Disable SSL verification globally for corporate network
 ENV PYTHONHTTPSVERIFY=0
