@@ -228,76 +228,39 @@ Models are downloaded automatically by FastEmbed on first use.
 4. Как изменится процентная ставка, если увеличить первоначальный взнос с 25% до 50% при сроке кредита 36 месяцев?
 5. В какой программе кредитования можно получить ставку 0% и при каких условиях (срок и первоначальный взнос)?
 ===============================================================================
-File "/usr/local/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
 
-  await self.app(scope, receive, send)
+File "/usr/local/lib/python3.12/site-packages/fastembed/late_interaction/late_interaction_text_embedding.py", line 66, in __init__
 
-File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 660, in __call__
+  self.model = EMBEDDING_MODEL_TYPE(
 
-  await self.middleware_stack(scope, receive, send)
+               ^^^^^^^^^^^^^^^^^^^^^
 
-File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 680, in app
+File "/usr/local/lib/python3.12/site-packages/fastembed/late_interaction/colbert.py", line 209, in __init__
 
-  await route.handle(scope, receive, send)
+  self.load_onnx_model()
 
-File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 276, in handle
+File "/usr/local/lib/python3.12/site-packages/fastembed/late_interaction/colbert.py", line 212, in load_onnx_model
 
-  await self.app(scope, receive, send)
+  self._load_onnx_model(
 
-File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 134, in app
+File "/usr/local/lib/python3.12/site-packages/fastembed/text/onnx_text_model.py", line 59, in _load_onnx_model
 
-  await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  super()._load_onnx_model(
 
-File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+File "/usr/local/lib/python3.12/site-packages/fastembed/common/onnx_model.py", line 113, in _load_onnx_model
 
-  raise exc
+  self.model = ort.InferenceSession(
 
-File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+               ^^^^^^^^^^^^^^^^^^^^^
 
-  await app(scope, receive, sender)
+File "/usr/local/lib/python3.12/site-packages/onnxruntime/capi/onnxruntime_inference_collection.py", line 504, in __init__
 
-File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 120, in app
+  self._create_inference_session(providers, provider_options, disabled_optimizers)
 
-  response = await f(request)
+File "/usr/local/lib/python3.12/site-packages/onnxruntime/capi/onnxruntime_inference_collection.py", line 599, in _create_inference_session
 
-             ^^^^^^^^^^^^^^^^
+  sess = C.InferenceSession(session_options, self._model_path, True, self._read_config_from_model)
 
-File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 674, in app
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-  raw_response = await run_endpoint_function(
-
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 328, in run_endpoint_function
-
-  return await dependant.call(**values)
-
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-File "/app/src/api/main.py", line 179, in upload_files
-
-  if not minio.bucket_exists(MINIO_BUCKET):
-
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-File "/usr/local/lib/python3.12/site-packages/minio/api.py", line 700, in bucket_exists
-
-  self._execute("HEAD", bucket_name)
-
-File "/usr/local/lib/python3.12/site-packages/minio/api.py", line 441, in _execute
-
-  region = self._get_region(bucket_name)
-
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-File "/usr/local/lib/python3.12/site-packages/minio/api.py", line 498, in _get_region
-
-  response = self._url_open(
-
-             ^^^^^^^^^^^^^^^
-
-File "/usr/local/lib/python3.12/site-packages/minio/api.py", line 427, in _url_open
-
-  raise response_error
-
-minio.error.S3Error: S3 operation failed; code: InvalidBucketName, message: The specified bucket is not valid., resource: /front_office, request_id: 18A2236722D5D8D8, host_id: dd9025bab4ad464b049177c95eb6ebf374d3b3fd1af9251148b658df7ac2e3e8
+onnxruntime.capi.onnxruntime_pybind11_state.NoSuchFile: [ONNXRuntimeError] : 3 : NO_SUCHFILE : Load model from /tmp/fastembed_cache/models--colbert-ir--colbertv2.0/snapshots/c1e84128e85ef755c096a95bdb06b47793b13acf/model.onnx failed:Load model /tmp/fastembed_cache/models--colbert-ir--colbertv2.0/snapshots/c1e84128e85ef755c096a95bdb06b47793b13acf/model.onnx failed. File doesn't exist
