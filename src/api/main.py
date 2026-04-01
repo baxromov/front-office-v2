@@ -291,19 +291,23 @@ async def stream_message(thread_id: str, body: dict, user=Depends(current_user))
         raise HTTPException(status_code=404)
 
     async def event_stream():
-        async with httpx.AsyncClient(timeout=120) as client:
-            async with client.stream(
-                "POST",
-                f"{LANGGRAPH_URL}/threads/{thread_id}/runs/stream",
-                json={
-                    "assistant_id": "agent",
-                    "input": {"messages": [{"role": "user", "content": body["message"]}]},
-                    "stream_mode": "messages",
-                },
-            ) as resp:
-                async for line in resp.aiter_lines():
-                    if line:
-                        yield line + "\n"
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(None, connect=10.0)) as client:
+                async with client.stream(
+                    "POST",
+                    f"{LANGGRAPH_URL}/threads/{thread_id}/runs/stream",
+                    json={
+                        "assistant_id": "agent",
+                        "input": {"messages": [{"role": "user", "content": body["message"]}]},
+                        "stream_mode": "messages",
+                    },
+                ) as resp:
+                    resp.raise_for_status()
+                    async for chunk in resp.aiter_bytes():
+                        yield chunk
+        except Exception as e:
+            import json as _json
+            yield f"event: error\ndata: {_json.dumps({'message': str(e)})}\n\n".encode()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
