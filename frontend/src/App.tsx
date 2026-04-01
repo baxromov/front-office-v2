@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
-import Chat from './pages/Chat'
 import Admin from './pages/Admin'
 import Settings from './pages/Settings'
 import Search from './pages/Search'
@@ -18,10 +17,9 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Protected><Chat /></Protected>} />
+        <Route path="/" element={<Protected><Search /></Protected>} />
         <Route path="/admin" element={<Protected adminOnly><Admin /></Protected>} />
         <Route path="/settings" element={<Protected adminOnly><Settings /></Protected>} />
-        <Route path="/search" element={<Protected><Search /></Protected>} />
       </Routes>
     </BrowserRouter>
   )
