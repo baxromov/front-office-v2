@@ -30,6 +30,7 @@ services:
       # HuggingFace Hub (fastembed downloads ONNX models at runtime)
       HF_HUB_DISABLE_XET: "1"
       HF_HUB_DOWNLOAD_TIMEOUT: "600"
+      FASTEMBED_CACHE_PATH: /root/.cache/fastembed
     volumes:
       - model_cache:/root/.cache
     depends_on:
@@ -71,6 +72,7 @@ services:
       # HuggingFace Hub (fastembed downloads ONNX models at runtime)
       HF_HUB_DISABLE_XET: "1"
       HF_HUB_DOWNLOAD_TIMEOUT: "600"
+      FASTEMBED_CACHE_PATH: /root/.cache/fastembed
       # Disable LangGraph OTLP exporter
       OTEL_TRACES_EXPORTER: "none"
     volumes:
