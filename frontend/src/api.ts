@@ -177,3 +177,23 @@ export function streamSearchAnswer(query: string, chunks: SearchChunk[]) {
     body: JSON.stringify({ query, chunks }),
   })
 }
+
+export interface MinioFile {
+  name: string
+  size: number
+  last_modified: string | null
+}
+
+export async function fetchFiles(): Promise<MinioFile[]> {
+  const res = await fetch(`${BASE}/admin/files`, { headers: authHeaders() })
+  if (!res.ok) throw new Error('Failed')
+  return res.json()
+}
+
+export async function deleteFile(filename: string) {
+  const res = await fetch(`${BASE}/admin/files/${encodeURIComponent(filename)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error('Delete failed')
+}

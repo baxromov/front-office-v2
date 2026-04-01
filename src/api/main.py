@@ -199,6 +199,28 @@ async def upload_files(files: list[UploadFile] = File(...), user=Depends(admin_u
     return {"uploaded": uploaded, "errors": errors}
 
 
+@app.get("/api/admin/files")
+async def list_files(user=Depends(admin_user)):
+    minio = get_minio()
+    if not minio.bucket_exists(MINIO_BUCKET):
+        return []
+    objects = list(minio.list_objects(MINIO_BUCKET, recursive=True))
+    return [
+        {
+            "name": obj.object_name,
+            "size": obj.size,
+            "last_modified": obj.last_modified.isoformat() if obj.last_modified else None,
+        }
+        for obj in objects
+    ]
+
+
+@app.delete("/api/admin/files/{filename:path}", status_code=204)
+async def delete_file(filename: str, user=Depends(admin_user)):
+    minio = get_minio()
+    minio.remove_object(MINIO_BUCKET, filename)
+
+
 # ── Threads ───────────────────────────────────────────────────────────────────
 
 @app.post("/api/threads")
