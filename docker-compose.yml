@@ -10,8 +10,12 @@ services:
     env_file:
       - .env
     environment:
-      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
       LANGGRAPH_URL: http://langgraph-server:2024
+      MONGO_URL: ${MONGO_URL}
+      QDRANT_URL: ${QDRANT_URL}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      REDIS_URL: ${REDIS_URL}
       # Disable all LangSmith/LangChain phone-home (corporate SSL blocks api.smith.langchain.com)
       LANGCHAIN_TRACING_V2: "false"
       LANGCHAIN_TRACING: "false"
@@ -46,7 +50,11 @@ services:
     env_file:
       - .env
     environment:
-      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
+      MONGO_URL: ${MONGO_URL}
+      QDRANT_URL: ${QDRANT_URL}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      REDIS_URL: ${REDIS_URL}
       # Disable all LangSmith/LangChain phone-home
       LANGCHAIN_TRACING_V2: "false"
       LANGCHAIN_TRACING: "false"

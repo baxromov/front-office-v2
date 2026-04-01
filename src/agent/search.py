@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "documents")
 DENSE_MODEL = os.getenv("DENSE_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 SPARSE_MODEL = os.getenv("SPARSE_MODEL", "Qdrant/bm25")
@@ -21,7 +22,7 @@ def _get_clients():
     if _qdrant is None:
         from fastembed import LateInteractionTextEmbedding, SparseTextEmbedding, TextEmbedding
         from qdrant_client import QdrantClient
-        _qdrant = QdrantClient(url=QDRANT_URL, prefer_grpc=False)
+        _qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY, prefer_grpc=False)
         _dense_model = TextEmbedding(DENSE_MODEL)
         _sparse_model = SparseTextEmbedding(SPARSE_MODEL)
         _late_model = LateInteractionTextEmbedding(LATE_INTERACTION_MODEL)

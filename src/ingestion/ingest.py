@@ -25,6 +25,7 @@ from qdrant_client.models import (
 load_dotenv()
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "documents")
 
 DENSE_MODEL = os.getenv("DENSE_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
@@ -162,7 +163,7 @@ def run_ingestion(
         secret_key=MINIO_SECRET_KEY,
         secure=MINIO_SECURE,
     )
-    qdrant = QdrantClient(url=QDRANT_URL, prefer_grpc=False)
+    qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY, prefer_grpc=False)
     dense_model = TextEmbedding(DENSE_MODEL)
     sparse_model = SparseTextEmbedding(SPARSE_MODEL)
     late_model = LateInteractionTextEmbedding(LATE_INTERACTION_MODEL)
