@@ -6,6 +6,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolArg, tool
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
+from langgraph.types import interrupt
 
 from src.agent.search import QDRANT_COLLECTION, run_search
 
@@ -16,7 +17,8 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:397b-cloud")
 
 DEFAULT_SYSTEM_PROMPT = (
     "You are a bank assistant. "
-    "Always use the search_documents tool first before answering. "
+    "If the user's question is ambiguous or missing important details, use the ask_human tool to ask ONE clarifying question first. "
+    "Otherwise, use the search_documents tool to find relevant information. "
     "Answer ONLY based on the information found in the knowledge base. "
     "If no relevant information is found, say you don't know — do not guess or make up answers. "
     "Keep answers short and to the point. "
@@ -45,6 +47,13 @@ def _get_llm():
 
 
 @tool
+def ask_human(question: str) -> str:
+    """Ask the user a clarifying question when their request is ambiguous or missing important details."""
+    answer = interrupt(question)
+    return answer
+
+
+@tool
 def search_documents(
     query: str,
     config: Annotated[RunnableConfig, InjectedToolArg],
@@ -61,6 +70,6 @@ def search_documents(
 
 graph = create_react_agent(
     model=_get_llm(),
-    tools=[search_documents],
+    tools=[search_documents, ask_human],
     prompt=_system_prompt,
 )

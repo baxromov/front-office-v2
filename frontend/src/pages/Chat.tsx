@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { fetchThreads, createThread, fetchMessages, streamMessage, updateThreadTitle, deleteThread, fetchSources, logout, getUser } from '../api'
+import { fetchThreads, createThread, fetchMessages, streamMessage, resumeThread, updateThreadTitle, deleteThread, fetchSources, logout, getUser } from '../api'
 
 interface Thread {
   id: string
@@ -23,6 +23,7 @@ export default function Chat() {
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [thinking, setThinking] = useState(false)
+  const [interrupted, setInterrupted] = useState<string | null>(null)
   const [thinkingSeconds, setThinkingSeconds] = useState(0)
   const thinkingTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const [hoveredThread, setHoveredThread] = useState<string | null>(null)
@@ -92,14 +93,21 @@ export default function Chat() {
     }
 
     try {
-      const resp = await streamMessage(threadId!, msg)
+      const isResuming = interrupted !== null
+      const resp = isResuming
+        ? await resumeThread(threadId!, msg)
+        : await streamMessage(threadId!, msg)
+      if (isResuming) setInterrupted(null)
+
       if (!resp.body) return
       const reader = resp.body.getReader()
       const decoder = new TextDecoder()
-      setMessages(prev => [...prev, { type: 'ai', content: '' }])
 
       let currentEvent = ''
       let buffer = ''
+      let aiMessageAdded = false
+      let gotInterrupt = false
+
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
@@ -117,9 +125,35 @@ export default function Chat() {
                 if (m.type === 'ai' && typeof m.content === 'string' && m.content) {
                   setThinking(false)
                   if (thinkingTimer.current) { clearInterval(thinkingTimer.current); thinkingTimer.current = null }
+                  if (!aiMessageAdded) {
+                    aiMessageAdded = true
+                    setMessages(prev => [...prev, { type: 'ai', content: m.content }])
+                  } else {
+                    setMessages(prev => {
+                      const updated = [...prev]
+                      updated[updated.length - 1] = { type: 'ai', content: m.content }
+                      return updated
+                    })
+                  }
+                }
+              }
+            } catch {}
+          } else if (line.startsWith('data:') && currentEvent === 'updates') {
+            try {
+              const data = JSON.parse(line.slice(5).trim())
+              if (data.__interrupt__?.[0]) {
+                const question = data.__interrupt__[0].value
+                setThinking(false)
+                if (thinkingTimer.current) { clearInterval(thinkingTimer.current); thinkingTimer.current = null }
+                gotInterrupt = true
+                setInterrupted(question)
+                if (!aiMessageAdded) {
+                  aiMessageAdded = true
+                  setMessages(prev => [...prev, { type: 'ai', content: question }])
+                } else {
                   setMessages(prev => {
                     const updated = [...prev]
-                    updated[updated.length - 1] = { type: 'ai', content: m.content }
+                    updated[updated.length - 1] = { type: 'ai', content: question }
                     return updated
                   })
                 }
@@ -128,15 +162,17 @@ export default function Chat() {
           }
         }
       }
-      // Fetch sources after stream completes
-      const sources = await fetchSources(threadId!)
-      if (sources.length > 0) {
-        setMessages(prev => {
-          const updated = [...prev]
-          const last = updated[updated.length - 1]
-          if (last.type === 'ai') updated[updated.length - 1] = { ...last, sources }
-          return updated
-        })
+
+      if (!gotInterrupt) {
+        const sources = await fetchSources(threadId!)
+        if (sources.length > 0) {
+          setMessages(prev => {
+            const updated = [...prev]
+            const last = updated[updated.length - 1]
+            if (last.type === 'ai') updated[updated.length - 1] = { ...last, sources }
+            return updated
+          })
+        }
       }
     } catch {
       setMessages(prev => [...prev, { type: 'ai', content: 'Sorry, an error occurred. Please try again.' }])

@@ -299,7 +299,35 @@ async def stream_message(thread_id: str, body: dict, user=Depends(current_user))
                     json={
                         "assistant_id": "agent",
                         "input": {"messages": [{"role": "user", "content": body["message"]}]},
-                        "stream_mode": "messages",
+                        "stream_mode": ["messages", "updates"],
+                    },
+                ) as resp:
+                    resp.raise_for_status()
+                    async for chunk in resp.aiter_bytes():
+                        yield chunk
+        except Exception as e:
+            import json as _json
+            yield f"event: error\ndata: {_json.dumps({'message': str(e)})}\n\n".encode()
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@app.post("/api/threads/{thread_id}/resume")
+async def resume_thread(thread_id: str, body: dict, user=Depends(current_user)):
+    db = get_db()
+    if not await db.threads.find_one({"_id": thread_id, "user_id": user["id"]}):
+        raise HTTPException(status_code=404)
+
+    async def event_stream():
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(None, connect=10.0)) as client:
+                async with client.stream(
+                    "POST",
+                    f"{LANGGRAPH_URL}/threads/{thread_id}/runs/stream",
+                    json={
+                        "assistant_id": "agent",
+                        "command": {"resume": body["answer"]},
+                        "stream_mode": ["messages", "updates"],
                     },
                 ) as resp:
                     resp.raise_for_status()

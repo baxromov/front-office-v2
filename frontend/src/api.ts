@@ -65,6 +65,14 @@ export function streamMessage(threadId: string, message: string) {
   })
 }
 
+export function resumeThread(threadId: string, answer: string) {
+  return fetch(`${BASE}/threads/${threadId}/resume`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ answer })
+  })
+}
+
 export async function fetchSources(threadId: string): Promise<string[]> {
   const res = await fetch(`${BASE}/threads/${threadId}/sources`, { headers: authHeaders() })
   if (!res.ok) return []
