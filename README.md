@@ -227,3 +227,43 @@ Models are downloaded automatically by FastEmbed on first use.
 3. Можно ли погасить кредит досрочно без штрафов?
 4. Как изменится процентная ставка, если увеличить первоначальный взнос с 25% до 50% при сроке кредита 36 месяцев?
 5. В какой программе кредитования можно получить ставку 0% и при каких условиях (срок и первоначальный взнос)?
+===============================================================================
+
+
+2026-04-01T04:28:26.072509Z [error    ] Background run failed. Exception: <class 'httpx.ConnectError'>(All connection attempts failed) [langgraph_api.worker] api_variant=local_dev assistant_id=fe096781-5601-53d2-b2f6-0d3403f7e9ca graph_id=agent langgraph_api_version=0.7.91 request_id=f86c6aaf-7f09-4dd5-869b-49c4ba627e29 run_attempt=1 run_completed_in_ms=2697 run_created_at=2026-04-01T04:28:23.376471+00:00 run_ended_at=2026-04-01T04:28:26.072186+00:00 run_exec_ms=2051 run_id=019d474c-b7d0-7940-9b21-c3ecf927d9f5 run_started_at=2026-04-01T04:28:24.020354+00:00 run_wait_time_ms=643 thread_id=522ee041-6bba-48fd-b953-3fa75bf9f035 thread_name=ThreadPoolExecutor-1_0
+
+Traceback (most recent call last):
+
+  File "/usr/local/lib/python3.12/site-packages/langgraph_api/worker.py", line 270, in worker
+
+    await asyncio.wait_for(
+
+  File "/usr/local/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+
+    return await fut
+
+           ^^^^^^^^^
+
+  File "/usr/local/lib/python3.12/site-packages/langgraph_api/worker.py", line 207, in wrap_user_errors
+
+    await consume(
+
+  File "/usr/local/lib/python3.12/site-packages/langgraph_api/stream.py", line 575, in consume
+
+    raise e
+
+  File "/usr/local/lib/python3.12/site-packages/langgraph_api/stream.py", line 563, in consume
+
+    async for mode, payload in stream:
+
+  File "/usr/local/lib/python3.12/site-packages/langgraph_api/stream.py", line 392, in astream_state
+
+    event = await wait_if_not_done(anext(stream, sentinel), done)
+
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/usr/local/lib/python3.12/site-packages/langgraph_api/asyncio.py", line 89, in wait_if_not_done
+
+    raise e.exceptions[0] from None
+
+  File "/usr/local/lib/python3.12/site-packages/langgraph/pregel/main.py", line 3111, in astream
