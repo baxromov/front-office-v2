@@ -228,76 +228,76 @@ Models are downloaded automatically by FastEmbed on first use.
 4. Как изменится процентная ставка, если увеличить первоначальный взнос с 25% до 50% при сроке кредита 36 месяцев?
 5. В какой программе кредитования можно получить ставку 0% и при каких условиях (срок и первоначальный взнос)?
 ===============================================================================
-INFO:     172.19.0.4:50028 - "POST /api/admin/upload HTTP/1.1" 500 Internal Server Error
+File "/usr/local/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
 
-ERROR:    Exception in ASGI application
+  await self.app(scope, receive, send)
 
-Traceback (most recent call last):
+File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 660, in __call__
 
-  File "/usr/local/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 416, in run_asgi
+  await self.middleware_stack(scope, receive, send)
 
-    result = await app(  # type: ignore[func-returns-value]
+File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 680, in app
 
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  await route.handle(scope, receive, send)
 
-  File "/usr/local/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 276, in handle
 
-    return await self.app(scope, receive, send)
+  await self.app(scope, receive, send)
 
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 134, in app
 
-  File "/usr/local/lib/python3.12/site-packages/fastapi/applications.py", line 1159, in __call__
+  await wrap_app_handling_exceptions(app, request)(scope, receive, send)
 
-    await super().__call__(scope, receive, send)
+File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
 
-  File "/usr/local/lib/python3.12/site-packages/starlette/applications.py", line 90, in __call__
+  raise exc
 
-    await self.middleware_stack(scope, receive, send)
+File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
 
-  File "/usr/local/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+  await app(scope, receive, sender)
 
-    raise exc
+File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 120, in app
 
-  File "/usr/local/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+  response = await f(request)
 
-    await self.app(scope, receive, _send)
+             ^^^^^^^^^^^^^^^^
 
-  File "/usr/local/lib/python3.12/site-packages/starlette/middleware/cors.py", line 96, in __call__
+File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 674, in app
 
-    await self.simple_response(scope, receive, send, request_headers=headers)
+  raw_response = await run_endpoint_function(
 
-  File "/usr/local/lib/python3.12/site-packages/starlette/middleware/cors.py", line 154, in simple_response
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    await self.app(scope, receive, send)
+File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 328, in run_endpoint_function
 
-  File "/usr/local/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+  return await dependant.call(**values)
 
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-  File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+File "/app/src/api/main.py", line 179, in upload_files
 
-    raise exc
+  if not minio.bucket_exists(MINIO_BUCKET):
 
-  File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    await app(scope, receive, sender)
+File "/usr/local/lib/python3.12/site-packages/minio/api.py", line 700, in bucket_exists
 
-  File "/usr/local/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+  self._execute("HEAD", bucket_name)
 
-    await self.app(scope, receive, send)
+File "/usr/local/lib/python3.12/site-packages/minio/api.py", line 441, in _execute
 
-  File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 660, in __call__
+  region = self._get_region(bucket_name)
 
-    await self.middleware_stack(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-  File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 680, in app
+File "/usr/local/lib/python3.12/site-packages/minio/api.py", line 498, in _get_region
 
-    await route.handle(scope, receive, send)
+  response = self._url_open(
 
-  File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 276, in handle
+             ^^^^^^^^^^^^^^^
 
-    await self.app(scope, receive, send)
+File "/usr/local/lib/python3.12/site-packages/minio/api.py", line 427, in _url_open
 
-  File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 134, in app
+  raise response_error
 
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+minio.error.S3Error: S3 operation failed; code: InvalidBucketName, message: The specified bucket is not valid., resource: /front_office, request_id: 18A2236722D5D8D8, host_id: dd9025bab4ad464b049177c95eb6ebf374d3b3fd1af9251148b658df7ac2e3e8
