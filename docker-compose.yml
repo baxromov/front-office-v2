@@ -47,6 +47,8 @@ services:
       - .env
     environment:
       OLLAMA_BASE_URL: http://host.docker.internal:11434
+      MONGO_URL: mongodb://host.docker.internal:27017
+      QDRANT_URL: http://host.docker.internal:6333
       # Disable all LangSmith/LangChain phone-home
       LANGCHAIN_TRACING_V2: "false"
       LANGCHAIN_TRACING: "false"

@@ -34,7 +34,12 @@ def _system_prompt(state, config: RunnableConfig) -> str:
     return config.get("configurable", {}).get("system_prompt", DEFAULT_SYSTEM_PROMPT)
 
 
-llm = ChatOllama(model=OLLAMA_MODEL, base_url=OLLAMA_BASE_URL, temperature=0)
+def _get_llm():
+    return ChatOllama(
+        model=os.getenv("OLLAMA_MODEL", OLLAMA_MODEL),
+        base_url=os.getenv("OLLAMA_BASE_URL", OLLAMA_BASE_URL),
+        temperature=0,
+    )
 
 
 @tool
@@ -53,7 +58,7 @@ def search_documents(
 
 
 graph = create_react_agent(
-    model=llm,
+    model=_get_llm(),
     tools=[search_documents],
     prompt=_system_prompt,
 )
