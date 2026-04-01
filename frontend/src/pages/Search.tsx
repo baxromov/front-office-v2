@@ -124,7 +124,7 @@ export default function Search() {
         }
       }
     } catch (e: any) {
-      setSearchError(e.message || 'Answer failed.')
+      setSearchError(`Answer failed: ${e.message || String(e)}`)
     } finally {
       setPhase('done')
     }

@@ -331,7 +331,11 @@ async def stream_message(thread_id: str, body: dict, user=Depends(current_user))
             import json as _json
             yield f"event: error\ndata: {_json.dumps({'message': str(e)})}\n\n".encode()
 
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+        "Connection": "keep-alive",
+    })
 
 
 @app.post("/api/threads/{thread_id}/resume")
@@ -359,7 +363,11 @@ async def resume_thread(thread_id: str, body: dict, user=Depends(current_user)):
             import json as _json
             yield f"event: error\ndata: {_json.dumps({'message': str(e)})}\n\n".encode()
 
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+        "Connection": "keep-alive",
+    })
 
 
 # ── Settings ──────────────────────────────────────────────────────────────────
@@ -449,7 +457,8 @@ async def search_answer(body: dict, user=Depends(current_user)):
                     "content": f"Context:\n{context}\n\nQuestion: {query}",
                 },
             ]
-            async with httpx.AsyncClient(timeout=120) as client:
+            _timeout = httpx.Timeout(connect=30.0, read=600.0, write=30.0, pool=30.0)
+            async with httpx.AsyncClient(timeout=_timeout) as client:
                 async with client.stream(
                     "POST",
                     f"{OLLAMA_BASE_URL}/api/chat",
@@ -457,7 +466,6 @@ async def search_answer(body: dict, user=Depends(current_user)):
                         "model": OLLAMA_MODEL,
                         "messages": ollama_messages,
                         "stream": True,
-                        "think": False,
                         "options": {
                             "temperature": temperature,
                             "num_predict": max_tokens,
@@ -471,8 +479,6 @@ async def search_answer(body: dict, user=Depends(current_user)):
                         if line:
                             try:
                                 data = json.loads(line)
-                                if data.get("message", {}).get("thinking"):
-                                    continue
                                 token = data.get("message", {}).get("content", "")
                                 if token:
                                     yield f"event: llm_token\ndata: {json.dumps({'token': token})}\n\n"
@@ -483,4 +489,8 @@ async def search_answer(body: dict, user=Depends(current_user)):
 
         yield "event: done\ndata: {}\n\n"
 
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+        "Connection": "keep-alive",
+    })
