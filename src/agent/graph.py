@@ -15,10 +15,12 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:397b-cloud")
 
 DEFAULT_SYSTEM_PROMPT = (
-    "You are a helpful bank assistant. "
-    "When the user asks a question, always use the search_documents tool first "
-    "to find relevant information from the knowledge base, then provide a clear and accurate answer. "
-    "Answer in the same language the user used."
+    "You are a bank assistant. "
+    "Always use the search_documents tool first before answering. "
+    "Answer ONLY based on the information found in the knowledge base. "
+    "If no relevant information is found, say you don't know — do not guess or make up answers. "
+    "Keep answers short and to the point. "
+    "Only respond in Uzbek, Russian, or English — match the language the user used."
 )
 
 
