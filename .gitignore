@@ -24,3 +24,4 @@ data/
 
 # Claude Code settings
 .claude/
+*.tar
