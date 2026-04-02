@@ -103,16 +103,3 @@ Both `Dockerfile` and `Dockerfile.langgraph` pre-download these models during `d
 Models are stored at `/root/.cache/fastembed` inside the image.
 Source: HuggingFace Hub (`huggingface.co`) — downloaded once during build, not at runtime.
 
----
-
-## 5. Notes for Security Team
-
-| Topic | Detail |
-|---|---|
-| **SSL verification** | Disabled globally in both Python containers via `sitecustomize.py` — workaround for corporate proxy. All `httpx`, `requests`, and Python `ssl` calls bypass certificate validation |
-| **JWT** | `python-jose[cryptography]` — HS256/RS256 signing |
-| **Password hashing** | `bcrypt` — no MD5/SHA1 |
-| **Secrets** | Loaded from `.env` via `python-dotenv` — not hardcoded |
-| **LangGraph mode** | Running in `dev` mode (`langgraph dev`) — not production-hardened |
-| **ONNX Runtime** | Pulled in transitively by `fastembed` — executes native compiled model files |
-| **No internet on server** | All packages and models baked into Docker images at build time |
