@@ -1,8 +1,10 @@
 # Dependency List for Security Review
 
+---
+
 ## 1. Frontend (`frontend/package.json`)
 
-### Runtime dependencies
+### Runtime dependencies (shipped to browser)
 | Package | Version | Purpose |
 |---|---|---|
 | react | ^18.3.1 | UI framework |
@@ -26,7 +28,7 @@
 
 ---
 
-## 2. Backend — FastAPI (`pyproject.toml`)
+## 2. Backend Python packages (`pyproject.toml`)
 
 Both `Dockerfile` (FastAPI) and `Dockerfile.langgraph` (LangGraph) install from the same `pyproject.toml`.
 
@@ -43,7 +45,7 @@ Both `Dockerfile` (FastAPI) and `Dockerfile.langgraph` (LangGraph) install from 
 | pymongo | >=4.0.0 | MongoDB driver |
 | minio | >=7.2.0 | MinIO / S3 object storage client |
 | qdrant-client | >=1.17.1 | Qdrant vector DB client |
-| fastembed | >=0.4.0 | Local embedding model (ONNX) |
+| fastembed | >=0.4.0 | Local embedding model runner (ONNX) |
 | pypdf | >=4.0.0 | PDF parsing |
 | python-docx | >=1.1.0 | DOCX parsing |
 | langchain-community | >=0.4.1 | LangChain integrations |
@@ -51,32 +53,66 @@ Both `Dockerfile` (FastAPI) and `Dockerfile.langgraph` (LangGraph) install from 
 | langgraph | >=1.1.3 | Agent orchestration framework |
 | langgraph-cli[inmem] | >=0.4.19 | LangGraph dev server |
 
----
-
-## 3. LangGraph Server (`Dockerfile.langgraph`)
-
-Uses the same `pyproject.toml` dependencies as FastAPI above.
-
-Additional package installed separately in `Dockerfile.langgraph`:
-
+### LangGraph-only extra
 | Package | Version | Purpose |
 |---|---|---|
-| langgraph-cli[inmem] | latest | LangGraph server runtime |
+| langgraph-cli[inmem] | latest | Installed separately in Dockerfile.langgraph before pyproject.toml |
 
 ---
 
-## 4. System-level (installed via apt in Dockerfiles)
+## 3. Linux system packages (apt) — `python:3.12-slim` base
+
+### Base image: `python:3.12-slim` (Debian Bookworm)
+Already included in the base image, not explicitly installed:
 
 | Package | Purpose |
 |---|---|
-| libgomp1 | OpenMP runtime — required by ONNX Runtime (fastembed) |
+| libc6 | GNU C Library — core Linux runtime |
+| libgcc-s1 | GCC runtime library |
+| libstdc++6 | C++ standard library |
+| libssl3 | OpenSSL shared library |
+| libcrypto (via libssl3) | Cryptographic primitives |
+| zlib1g | zlib compression library |
+| libexpat1 | XML parsing (used by Python) |
+| libffi8 | Foreign function interface (used by Python ctypes/cffi) |
+| libsqlite3-0 | SQLite (built into Python) |
+| libncursesw6 | Terminal handling |
+| libbz2-1.0 | bzip2 compression |
+| liblzma5 | XZ/LZMA compression |
+| libreadline8 | Readline (Python REPL) |
+| libuuid1 | UUID generation |
+| libtinfo6 | Terminal info database |
+
+### Explicitly installed via `apt-get install` in both Dockerfiles:
+| Package | Purpose | Required by |
+|---|---|---|
+| libgomp1 | GNU OpenMP runtime — shared memory parallelism | ONNX Runtime (fastembed) |
 
 ---
 
-## Notes for Security Team
+## 4. ML models downloaded at image build time (fastembed / HuggingFace Hub)
 
-- **JWT**: `python-jose[cryptography]` used for auth token signing/verification
-- **Password hashing**: `bcrypt` (no MD5/SHA1)
-- **SSL verification disabled** in both Python containers via `sitecustomize.py` patch — this is a workaround for the corporate proxy environment and should be reviewed
-- **No direct database credentials** in code — loaded from `.env` via `python-dotenv`
-- **LangGraph server** runs in `dev` mode (`langgraph dev`) — not hardened for production
+Both `Dockerfile` and `Dockerfile.langgraph` pre-download these models during `docker build` so the server needs no internet at runtime.
+
+| Model | Type | Class | Approx. size |
+|---|---|---|---|
+| `sentence-transformers/all-MiniLM-L6-v2` | Dense embedding | `TextEmbedding` | ~90 MB |
+| `Qdrant/bm25` | Sparse embedding | `SparseTextEmbedding` | ~5 MB |
+| `colbert-ir/colbertv2.0` | Late interaction (re-ranking) | `LateInteractionTextEmbedding` | ~440 MB |
+
+Models are stored at `/root/.cache/fastembed` inside the image.
+Source: HuggingFace Hub (`huggingface.co`) — downloaded once during build, not at runtime.
+
+---
+
+## 5. Notes for Security Team
+
+| Topic | Detail |
+|---|---|
+| **SSL verification** | Disabled globally in both Python containers via `sitecustomize.py` — workaround for corporate proxy. All `httpx`, `requests`, and Python `ssl` calls bypass certificate validation |
+| **JWT** | `python-jose[cryptography]` — HS256/RS256 signing |
+| **Password hashing** | `bcrypt` — no MD5/SHA1 |
+| **Secrets** | Loaded from `.env` via `python-dotenv` — not hardcoded |
+| **LangGraph mode** | Running in `dev` mode (`langgraph dev`) — not production-hardened |
+| **ONNX Runtime** | Pulled in transitively by `fastembed` — executes native compiled model files |
+| **No internet on server** | All packages and models baked into Docker images at build time |
